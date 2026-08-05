@@ -80,19 +80,19 @@
 </head>
 <body>
 <div class="container">
-  <h1>⚔️ P2P 卡牌通讯测试</h1>
-  <div class="status" id="statusDisplay">⏳ 未连接</div>
+  <h1> P2P 卡牌通讯测试</h1>
+  <div class="status" id="statusDisplay">未连接</div>
 
   <!-- 创建房间区域 -->
   <div class="section" id="createSection">
-    <h2>🏠 创建房间</h2>
+    <h2> 创建房间</h2>
     <button id="createRoomBtn">1. 创建房间（生成 Offer）</button>
     <div class="error" id="createError"></div>
     <textarea id="offerSDP" placeholder="Offer 生成后会出现在这里..." readonly></textarea>
     <div class="button-group">
       <button id="copyOfferBtn" disabled>复制 Offer</button>
     </div>
-    <p style="font-size:0.85rem; color:#aaa;">➡️ 把 Offer 发给朋友，然后等待粘贴 Answer</p>
+    <p style="font-size:0.85rem; color:#aaa;"> 把 Offer 发给朋友，然后等待粘贴 Answer</p>
     <textarea id="remoteAnswer" placeholder="朋友发给你的 Answer 粘贴到这里..."></textarea>
     <button id="submitAnswerBtn" disabled>2. 提交 Answer 完成连接</button>
     <div class="error" id="answerError"></div>
@@ -100,7 +100,7 @@
 
   <!-- 加入房间区域 -->
   <div class="section" id="joinSection">
-    <h2>🚪 加入房间</h2>
+    <h2> 加入房间</h2>
     <textarea id="remoteOffer" placeholder="把主机发给你的 Offer 粘贴到这里..."></textarea>
     <button id="joinRoomBtn">1. 设置 Offer 并生成 Answer</button>
     <div class="error" id="joinError"></div>
@@ -108,12 +108,12 @@
     <div class="button-group">
       <button id="copyAnswerBtn" disabled>复制 Answer</button>
     </div>
-    <p style="font-size:0.85rem; color:#aaa;">➡️ 把 Answer 发回给主机</p>
+    <p style="font-size:0.85rem; color:#aaa;"> 把 Answer 发回给主机</p>
   </div>
 
   <!-- 聊天测试区域（连接成功后才显示） -->
   <div class="section" id="chatSection" style="display:none;">
-    <h2>💬 聊天测试</h2>
+    <h2> 通讯测试</h2>
     <div class="chat-box" id="chatBox"></div>
     <div class="chat-input-group">
       <input type="text" id="chatInput" placeholder="输入消息..." />
@@ -177,7 +177,7 @@
       try {
         await navigator.clipboard.writeText(text);
         const original = button.textContent;
-        button.textContent = '✅ 已复制';
+        button.textContent = ' 已复制';
         setTimeout(() => { button.textContent = original; }, 1500);
       } catch (err) {
         showError(createError, '复制失败，请手动复制');
@@ -187,7 +187,7 @@
     // 处理数据通道消息
     function onDataChannelMessage(event) {
       const msg = event.data;
-      addChatMessage(`📩 对方: ${msg}`);
+      addChatMessage(` 对方: ${msg}`);
     }
 
     // 设置数据通道事件（发起端已有通道，接收端用传入的通道）
@@ -196,13 +196,13 @@
       dataChannel.onmessage = onDataChannelMessage;
       dataChannel.onopen = () => {
         connectionReady = true;
-        updateStatus('✅ 已连接！可以开始聊天');
+        updateStatus(' 已连接！可以开始聊天');
         chatSection.style.display = 'block';
         addChatMessage('--- 连接成功，开始对战吧！ ---');
       };
       dataChannel.onclose = () => {
         connectionReady = false;
-        updateStatus('❌ 连接已断开');
+        updateStatus(' 连接已断开');
       };
     }
 
@@ -215,14 +215,14 @@
         return;
       }
       dataChannel.send(text);
-      addChatMessage(`📤 我: ${text}`);
+      addChatMessage(`我: ${text}`);
       chatInput.value = '';
     }
 
     // ---------- 创建房间逻辑 ----------
     async function createRoom() {
       createError.textContent = '';
-      updateStatus('🔄 正在生成连接信息...');
+      updateStatus(' 正在生成连接信息...');
       try {
         pc = new RTCPeerConnection(rtcConfig);
         isCreator = true;
@@ -237,7 +237,7 @@
             // ICE 收集完成，此时 localDescription.sdp 里包含了所有候选
             offerSDP.value = pc.localDescription.sdp;
             copyOfferBtn.disabled = false;
-            updateStatus('📋 Offer 已生成，请复制并发送给朋友');
+            updateStatus(' Offer 已生成，请复制并发送给朋友');
           }
         };
 
@@ -265,7 +265,7 @@
           sdp: answerText
         });
         await pc.setRemoteDescription(answerDesc);
-        updateStatus('🔗 正在建立连接...');
+        updateStatus(' 正在建立连接...');
         // 连接成功的事件会在数据通道 onopen 中处理
       } catch (err) {
         showError(answerError, `设置 Answer 失败: ${err.message}`);
@@ -280,7 +280,7 @@
         return;
       }
       joinError.textContent = '';
-      updateStatus('🔄 正在设置 Offer...');
+      updateStatus(' 正在设置 Offer...');
       try {
         pc = new RTCPeerConnection(rtcConfig);
         isCreator = false;
@@ -296,7 +296,7 @@
             // ICE 收集完成，显示完整 Answer SDP
             answerSDP.value = pc.localDescription.sdp;
             copyAnswerBtn.disabled = false;
-            updateStatus('📋 Answer 已生成，请复制并发送回主机');
+            updateStatus(' Answer 已生成，请复制并发送回主机');
           }
         };
 
