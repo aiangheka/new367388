@@ -1,340 +1,636 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>P2P 卡牌对战 - 手动连接</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: #1a1a2e;
-      color: #eee;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 16px;
-    }
-    .container {
-      max-width: 600px;
-      width: 100%;
-      background: #16213e;
-      border-radius: 16px;
-      padding: 24px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
-    }
-    h1 { text-align: center; margin-bottom: 16px; font-size: 1.5rem; }
-    .status { text-align: center; margin-bottom: 16px; padding: 10px; background: #0f3460; border-radius: 8px; }
-    .section { margin-bottom: 20px; }
-    .section h2 { font-size: 1.1rem; margin-bottom: 8px; color: #e94560; }
-    textarea {
-      width: 100%;
-      height: 120px;
-      background: #0f3460;
-      color: #eee;
-      border: 1px solid #e94560;
-      border-radius: 8px;
-      padding: 10px;
-      resize: vertical;
-      font-family: monospace;
-      font-size: 0.8rem;
-    }
-    .button-group { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
-    button {
-      background: #e94560;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      padding: 10px 16px;
-      font-size: 1rem;
-      cursor: pointer;
-      flex: 1;
-      min-width: 80px;
-      transition: background 0.2s;
-    }
-    button:active { background: #b8304f; }
-    button:disabled { background: #555; cursor: not-allowed; }
-    .chat-box {
-      width: 100%;
-      height: 150px;
-      background: #0f3460;
-      border: 1px solid #e94560;
-      border-radius: 8px;
-      padding: 10px;
-      overflow-y: auto;
-      margin-bottom: 8px;
-      font-family: monospace;
-    }
-    .chat-input-group { display: flex; gap: 8px; }
-    .chat-input-group input {
-      flex: 1;
-      background: #0f3460;
-      color: #eee;
-      border: 1px solid #e94560;
-      border-radius: 8px;
-      padding: 10px;
-    }
-    .error { color: #ff6b6b; font-size: 0.9rem; margin-top: 4px; }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>P2P 连通测试 · 聊天</title>
+    <!-- 使用 PeerJS 简化 WebRTC 信令与连接 -->
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js">
+    </script>
+    <style>
+        /* 全局灰白黑主色调，无圆角过多装饰，极简风格 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #2c2c2c;      /* 深灰背景 */
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 16px;
+        }
+
+        .app {
+            background: #f5f5f5;       /* 浅灰主卡片 */
+            color: #1e1e1e;
+            width: 100%;
+            max-width: 480px;
+            border-radius: 12px;        /* 保留轻微圆角，不破坏极简，但可接受 */
+            padding: 24px 20px 28px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            color: #1e1e1e;
+            border-bottom: 2px solid #9e9e9e;
+            padding-bottom: 10px;
+            margin-bottom: 4px;
+        }
+
+        .role-selector {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .role-selector button {
+            flex: 1;
+            min-width: 80px;
+            padding: 10px 0;
+            background: #d0d0d0;
+            border: none;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #1e1e1e;
+            cursor: pointer;
+            transition: background 0.15s;
+            border-radius: 6px;
+        }
+
+        .role-selector button.active {
+            background: #9e9e9e;
+            color: #ffffff;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .role-selector button:hover {
+            background: #bdbdbd;
+        }
+
+        .connection-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: #e8e8e8;
+            padding: 16px 14px;
+            border-radius: 8px;
+        }
+
+        .connection-panel .row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .connection-panel label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #2c2c2c;
+            min-width: 60px;
+        }
+
+        .connection-panel input {
+            flex: 1;
+            min-width: 120px;
+            padding: 8px 10px;
+            border: 1px solid #9e9e9e;
+            border-radius: 4px;
+            background: #ffffff;
+            color: #1e1e1e;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border 0.15s;
+        }
+
+        .connection-panel input:focus {
+            border-color: #555555;
+        }
+
+        .connection-panel .action-btn {
+            padding: 8px 18px;
+            background: #3a3a3a;
+            border: none;
+            border-radius: 4px;
+            color: #ffffff;
+            font-weight: 500;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: background 0.15s;
+            white-space: nowrap;
+        }
+
+        .connection-panel .action-btn:hover {
+            background: #1e1e1e;
+        }
+
+        .connection-panel .action-btn:disabled {
+            opacity: 0.5;
+            cursor: default;
+            background: #6e6e6e;
+        }
+
+        .status {
+            font-size: 0.9rem;
+            color: #3a3a3a;
+            background: #d6d6d6;
+            padding: 8px 12px;
+            border-radius: 4px;
+            word-break: break-all;
+            min-height: 2.4em;
+            display: flex;
+            align-items: center;
+        }
+
+        .chat-area {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: #e8e8e8;
+            border-radius: 8px;
+            padding: 16px 14px;
+        }
+
+        .messages {
+            background: #ffffff;
+            border: 1px solid #b0b0b0;
+            border-radius: 4px;
+            height: 180px;
+            overflow-y: auto;
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 0.95rem;
+            color: #1e1e1e;
+        }
+
+        .messages .msg {
+            padding: 4px 0;
+            border-bottom: 1px solid #e0e0e0;
+            word-break: break-word;
+        }
+
+        .messages .msg:last-child {
+            border-bottom: none;
+        }
+
+        .messages .msg .sender {
+            font-weight: 600;
+            color: #2c2c2c;
+        }
+
+        .messages .msg .sender.me {
+            color: #5a5a5a;
+        }
+
+        .chat-input-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input-row input {
+            flex: 1;
+            padding: 8px 10px;
+            border: 1px solid #9e9e9e;
+            border-radius: 4px;
+            background: #ffffff;
+            color: #1e1e1e;
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        .chat-input-row input:focus {
+            border-color: #555555;
+        }
+
+        .chat-input-row button {
+            padding: 8px 18px;
+            background: #3a3a3a;
+            border: none;
+            border-radius: 4px;
+            color: #ffffff;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .chat-input-row button:hover {
+            background: #1e1e1e;
+        }
+
+        .chat-input-row button:disabled {
+            opacity: 0.4;
+            cursor: default;
+            background: #6e6e6e;
+        }
+
+        .footer-hint {
+            font-size: 0.8rem;
+            color: #6e6e6e;
+            text-align: center;
+            border-top: 1px solid #c0c0c0;
+            padding-top: 12px;
+            margin-top: 4px;
+        }
+
+        /* 禁用状态下的输入 */
+        .disabled-input {
+            background: #d6d6d6 !important;
+            color: #5a5a5a;
+        }
+    </style>
 </head>
 <body>
-<div class="container">
-  <h1>P2P 卡牌通讯测试</h1>
-  <div class="status" id="statusDisplay">未连接</div>
 
-  <!-- 创建房间区域 -->
-  <div class="section" id="createSection">
-    <h2>创建房间</h2>
-    <button id="createRoomBtn">1. 创建房间（生成 Offer）</button>
-    <div class="error" id="createError"></div>
-    <textarea id="offerSDP" placeholder="Offer 生成后会出现在这里..." readonly></textarea>
-    <div class="button-group">
-      <button id="copyOfferBtn" disabled>复制 Offer</button>
-    </div>
-    <p style="font-size:0.85rem; color:#aaa;">把 Offer 发给朋友，然后等待粘贴 Answer</p>
-    <textarea id="remoteAnswer" placeholder="朋友发给你的 Answer 粘贴到这里..."></textarea>
-    <button id="submitAnswerBtn" disabled>2. 提交 Answer 完成连接</button>
-    <div class="error" id="answerError"></div>
-  </div>
+<div class="app">
+    <h1>P2P 连通测试</h1>
 
-  <!-- 加入房间区域 -->
-  <div class="section" id="joinSection">
-    <h2>加入房间</h2>
-    <textarea id="remoteOffer" placeholder="把主机发给你的 Offer 粘贴到这里..."></textarea>
-    <button id="joinRoomBtn">1. 设置 Offer 并生成 Answer</button>
-    <div class="error" id="joinError"></div>
-    <textarea id="answerSDP" placeholder="你的 Answer 会出现在这里..." readonly></textarea>
-    <div class="button-group">
-      <button id="copyAnswerBtn" disabled>复制 Answer</button>
+    <!-- 角色选择 -->
+    <div class="role-selector">
+        <button id="btnHost" class="active">主机 (创建房间)</button>
+        <button id="btnClient">客户端 (加入房间)</button>
     </div>
-    <p style="font-size:0.85rem; color:#aaa;">把 Answer 发回给主机</p>
-  </div>
 
-  <!-- 聊天测试区域（连接成功后才显示） -->
-  <div class="section" id="chatSection" style="display:none;">
-    <h2>聊天测试</h2>
-    <div class="chat-box" id="chatBox"></div>
-    <div class="chat-input-group">
-      <input type="text" id="chatInput" placeholder="输入消息..." />
-      <button id="sendBtn">发送</button>
+    <!-- 连接控制 -->
+    <div class="connection-panel">
+        <div class="row">
+            <label for="roomIdInput">房间 ID</label>
+            <input type="text" id="roomIdInput" placeholder="输入房间标识" value="test-room" />
+        </div>
+        <div class="row" style="justify-content: flex-end;">
+            <button id="actionBtn" class="action-btn">创建房间</button>
+        </div>
+        <div class="status" id="statusDisplay">就绪 · 请选择角色并操作</div>
     </div>
-  </div>
+
+    <!-- 聊天区域 -->
+    <div class="chat-area">
+        <div class="messages" id="messageList">
+            <div class="msg" style="color:#6e6e6e; font-style:italic; border-bottom:none;">等待连接…</div>
+        </div>
+        <div class="chat-input-row">
+            <input type="text" id="chatInput" placeholder="输入消息…" disabled />
+            <button id="sendBtn" disabled>发送</button>
+        </div>
+    </div>
+
+    <div class="footer-hint">基于 WebRTC (PeerJS) · 使用公共信令服务器</div>
 </div>
 
 <script>
-  (function() {
-    // ---------- DOM 元素 ----------
-    const statusDisplay = document.getElementById('statusDisplay');
-    const createRoomBtn = document.getElementById('createRoomBtn');
-    const offerSDP = document.getElementById('offerSDP');
-    const copyOfferBtn = document.getElementById('copyOfferBtn');
-    const remoteAnswer = document.getElementById('remoteAnswer');
-    const submitAnswerBtn = document.getElementById('submitAnswerBtn');
-    const createError = document.getElementById('createError');
-    const answerError = document.getElementById('answerError');
+    (function() {
+        // ---------- DOM 引用 ----------
+        const btnHost = document.getElementById('btnHost');
+        const btnClient = document.getElementById('btnClient');
+        const roomInput = document.getElementById('roomIdInput');
+        const actionBtn = document.getElementById('actionBtn');
+        const statusDisplay = document.getElementById('statusDisplay');
+        const messageList = document.getElementById('messageList');
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn');
 
-    const remoteOffer = document.getElementById('remoteOffer');
-    const joinRoomBtn = document.getElementById('joinRoomBtn');
-    const answerSDP = document.getElementById('answerSDP');
-    const copyAnswerBtn = document.getElementById('copyAnswerBtn');
-    const joinError = document.getElementById('joinError');
+        // ---------- 状态 ----------
+        let currentRole = 'host';        // 'host' 或 'client'
+        let peer = null;                // Peer 实例
+        let connection = null;          // DataConnection
+        let isConnected = false;
+        let myPeerId = null;            // 本机的 peer ID
+        let remotePeerId = null;        // 对方的 peer ID（仅客户端用）
 
-    const chatSection = document.getElementById('chatSection');
-    const chatBox = document.getElementById('chatBox');
-    const chatInput = document.getElementById('chatInput');
-    const sendBtn = document.getElementById('sendBtn');
+        // ---------- 工具函数 ----------
+        function setStatus(msg, isError = false) {
+            statusDisplay.textContent = msg;
+            statusDisplay.style.color = isError ? '#b00020' : '#3a3a3a';
+        }
 
-    // ---------- 全局变量 ----------
-    let pc = null;
-    let dataChannel = null;
-    let isCreator = false;
-    let connectionReady = false;
+        function appendMessage(sender, text, isMe = false) {
+            // 清除占位提示（如果存在）
+            const placeholder = messageList.querySelector('.msg[style*="italic"]');
+            if (placeholder && messageList.children.length === 1) {
+                messageList.innerHTML = '';
+            }
 
-    const rtcConfig = {
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-    };
+            const div = document.createElement('div');
+            div.className = 'msg';
+            const senderSpan = document.createElement('span');
+            senderSpan.className = 'sender' + (isMe ? ' me' : '');
+            senderSpan.textContent = sender + ': ';
+            const textSpan = document.createElement('span');
+            textSpan.textContent = text;
+            div.appendChild(senderSpan);
+            div.appendChild(textSpan);
+            messageList.appendChild(div);
+            messageList.scrollTop = messageList.scrollHeight;
+        }
 
-    // ---------- 工具函数 ----------
-    function updateStatus(text, isError = false) {
-      statusDisplay.textContent = text;
-      statusDisplay.style.background = isError ? '#e94560' : '#0f3460';
-    }
+        function setUIEnabled(enabled) {
+            chatInput.disabled = !enabled;
+            sendBtn.disabled = !enabled;
+            if (!enabled) {
+                chatInput.value = '';
+            }
+        }
 
-    function addChatMessage(msg) {
-      chatBox.innerHTML += `<div>${msg}</div>`;
-      chatBox.scrollTop = chatBox.scrollHeight;
-    }
+        function resetToInitial() {
+            // 关闭已有连接
+            if (connection) {
+                try { connection.close(); } catch (e) {}
+                connection = null;
+            }
+            if (peer) {
+                try { peer.destroy(); } catch (e) {}
+                peer = null;
+            }
+            isConnected = false;
+            myPeerId = null;
+            remotePeerId = null;
+            setUIEnabled(false);
+            // 清空消息列表，显示占位
+            messageList.innerHTML = '<div class="msg" style="color:#6e6e6e; font-style:italic; border-bottom:none;">等待连接…</div>';
+            // 恢复按钮文字
+            if (currentRole === 'host') {
+                actionBtn.textContent = '创建房间';
+                roomInput.disabled = false;
+                roomInput.classList.remove('disabled-input');
+            } else {
+                actionBtn.textContent = '加入房间';
+                roomInput.disabled = false;
+                roomInput.classList.remove('disabled-input');
+            }
+            setStatus('就绪 · 请选择角色并操作');
+        }
 
-    function showError(element, msg) {
-      element.textContent = msg;
-      setTimeout(() => { element.textContent = ''; }, 5000);
-    }
+        // ---------- 处理收到的消息 ----------
+        function handleReceivedMessage(data) {
+            if (typeof data === 'string') {
+                // 尝试解析 JSON（可能携带 sender 信息）
+                try {
+                    const parsed = JSON.parse(data);
+                    if (parsed.type === 'chat' && parsed.text) {
+                        const senderName = parsed.sender || '对方';
+                        appendMessage(senderName, parsed.text, false);
+                        return;
+                    }
+                } catch (e) {
+                    // 不是 JSON，当作纯文本处理
+                }
+                // 纯文本，显示为对方消息
+                appendMessage('对方', data, false);
+            } else {
+                // 非字符串忽略
+                console.warn('收到非文本消息', data);
+            }
+        }
 
-    // 清理 SDP 中可能导致跨浏览器解析失败的非标属性
-    function cleanSDP(sdp) {
-      return sdp
-        .replace(/^a=max-message-size:.*[\r\n]*/gm, '')
-        .replace(/^a=sctp-port:.*[\r\n]*/gm, '')
-        .replace(/^a=extmap-allow-mixed[\r\n]*/gm, '');
-    }
+        // ---------- 发送聊天消息 ----------
+        function sendChatMessage(text) {
+            if (!isConnected || !connection || connection.open === false) {
+                setStatus('未连接，无法发送', true);
+                return;
+            }
+            // 组装消息，包含发送者标识（本机角色）
+            const payload = JSON.stringify({
+                type: 'chat',
+                text: text,
+                sender: currentRole === 'host' ? '主机' : '客户端'
+            });
+            try {
+                connection.send(payload);
+                // 显示在自己的聊天框（标记为“我”）
+                appendMessage('我', text, true);
+                chatInput.value = '';
+                chatInput.focus();
+            } catch (err) {
+                setStatus('发送失败: ' + err.message, true);
+            }
+        }
 
-    async function copyToClipboard(text, button) {
-      try {
-        await navigator.clipboard.writeText(text);
-        const original = button.textContent;
-        button.textContent = '已复制';
-        setTimeout(() => { button.textContent = original; }, 1500);
-      } catch (err) {
-        showError(createError, '复制失败，请手动复制');
-      }
-    }
+        // ---------- 建立连接后的处理 ----------
+        function onConnectionEstablished(conn, isInitiator) {
+            connection = conn;
+            isConnected = true;
+            setUIEnabled(true);
+            chatInput.focus();
 
-    function onDataChannelMessage(event) {
-      const msg = event.data;
-      addChatMessage(`对方: ${msg}`);
-    }
+            // 监听消息
+            conn.on('data', (data) => {
+                handleReceivedMessage(data);
+            });
 
-    function setupDataChannel(channel) {
-      dataChannel = channel;
-      dataChannel.onmessage = onDataChannelMessage;
-      dataChannel.onopen = () => {
-        connectionReady = true;
-        updateStatus('已连接！可以开始聊天');
-        chatSection.style.display = 'block';
-        addChatMessage('--- 连接成功，开始对战吧！ ---');
-      };
-      dataChannel.onclose = () => {
-        connectionReady = false;
-        updateStatus('连接已断开');
-      };
-    }
+            // 监听关闭
+            conn.on('close', () => {
+                setStatus('连接已断开', true);
+                isConnected = false;
+                setUIEnabled(false);
+                // 不销毁 peer，保留以便重连？这里简单处理，允许用户重新操作
+                // 但为了防止状态混乱，我们重置界面，但保留 peer 实例？
+                // 更稳健：重置全部，但保留 peer 可能带来问题，我们选择完全重置。
+                // 但为了用户体验，只关闭连接，重置状态。
+                // 但是 peer 可能还活着，我们可以尝试重新连接？
+                // 这里简单处理：显示断开，用户可手动重新创建/加入。
+                connection = null;
+                // 改变按钮文字为可重新操作
+                if (currentRole === 'host') {
+                    actionBtn.textContent = '创建房间';
+                } else {
+                    actionBtn.textContent = '加入房间';
+                }
+                roomInput.disabled = false;
+                roomInput.classList.remove('disabled-input');
+                // 不自动重置 peer，但可让用户手动重置？我们允许用户再次点击操作
+                // 但为了安全，resetToInitial 会清理，但可能丢失 peer。我们提供手动重置方式。
+                // 更好的做法：当连接断开时，允许用户重新创建。当前我们保持 peer 存在，但重新连接需要新 peer？
+                // 简单处理：提示用户刷新页面或重新操作。
+                // 或者我们允许重新连接：但需要重新创建peer，所以这里我们重置状态，让用户重新操作。
+                // 但为了不破坏已有peer，我们保留，但是让操作按钮重新启用。
+                // 但我们希望用户点击操作时会重置旧的。所以我们重置内部状态但不重置UI？
+                // 简化：调用 resetToInitial 会销毁peer，这样用户再次点击会新建。
+                // 但关闭事件中调用 resetToInitial 可能导致问题，因为正在关闭。
+                // 延时执行
+                setTimeout(() => {
+                    resetToInitial();
+                }, 100);
+            });
 
-    function sendMessage() {
-      const text = chatInput.value.trim();
-      if (!text) return;
-      if (!dataChannel || dataChannel.readyState !== 'open') {
-        alert('连接未就绪');
-        return;
-      }
-      dataChannel.send(text);
-      addChatMessage(`我: ${text}`);
-      chatInput.value = '';
-    }
+            // 监听错误
+            conn.on('error', (err) => {
+                setStatus('连接错误: ' + err.message, true);
+                // 不立即断开，让 close 事件处理
+            });
 
-    // ---------- 创建房间逻辑 ----------
-    async function createRoom() {
-      createError.textContent = '';
-      updateStatus('正在生成连接信息...');
-      try {
-        pc = new RTCPeerConnection(rtcConfig);
-        isCreator = true;
+            // 更新状态
+            if (isInitiator) {
+                setStatus('已连接到 ' + conn.peer);
+            } else {
+                setStatus('已接受来自 ' + conn.peer + ' 的连接');
+            }
+            // 显示一条系统消息
+            appendMessage('系统', '连接成功，可以开始聊天', false);
+        }
 
-        const channel = pc.createDataChannel('game');
-        setupDataChannel(channel);
+        // ---------- 作为主机：创建房间 ----------
+        function createRoom(roomId) {
+            if (!roomId.trim()) {
+                setStatus('请输入房间标识', true);
+                return;
+            }
 
-        pc.onicecandidate = (event) => {
-          if (!event.candidate) {
-            offerSDP.value = pc.localDescription.sdp;
-            copyOfferBtn.disabled = false;
-            updateStatus('Offer 已生成，请复制并发送给朋友');
-          }
-        };
+            resetToInitial(); // 清理旧状态
 
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-      } catch (err) {
-        updateStatus('创建失败', true);
-        showError(createError, `错误: ${err.message}`);
-      }
-    }
+            // 生成一个随机 ID 作为自己的 peer ID（或者使用固定前缀+房间）
+            // 这里我们使用 “host-” + 随机数，让主机 ID 可预测？但为了演示，我们采用 peer 自动生成。
+            // 但我们要让客户端知道主机的 ID，因此主机需要将 ID 告知客户端（通过房间标识？）
+            // 但我们的设计是：房间标识即为主机的 peer ID。所以主机需要把它的 peer ID 设置为 roomId。
+            // 但 PeerJS 的构造函数允许传入 id，这样我们可以固定主机的 ID。
+            // 但要注意，如果多个主机使用相同 ID 会冲突，所以需要保证唯一性。
+            // 简单方法：让主机 ID 为 "host-" + roomId，客户端连接该 ID。
+            const hostId = 'host-' + roomId.trim();
+            myPeerId = hostId;
 
-    async function submitAnswer() {
-      const answerText = remoteAnswer.value.trim();
-      if (!answerText) {
-        showError(answerError, '请先粘贴朋友发给你的 Answer');
-        return;
-      }
-      answerError.textContent = '';
-      try {
-        const cleanedAnswer = cleanSDP(answerText);
-        const answerDesc = new RTCSessionDescription({
-          type: 'answer',
-          sdp: cleanedAnswer
+            // 创建 Peer
+            peer = new Peer(hostId, {
+                debug: 0,
+                // 可指定信令服务器配置，这里使用默认
+            });
+
+            peer.on('open', (id) => {
+                setStatus('主机已创建，ID: ' + id + '  (房间标识: ' + roomId + ')');
+                // 等待连接
+                actionBtn.textContent = '等待客户端连接…';
+                actionBtn.disabled = true;
+                roomInput.disabled = true;
+                roomInput.classList.add('disabled-input');
+            });
+
+            peer.on('connection', (conn) => {
+                // 客户端发来的连接
+                if (connection) {
+                    // 已有连接，拒绝新的
+                    conn.close();
+                    setStatus('已有连接，拒绝新连接', true);
+                    return;
+                }
+                remotePeerId = conn.peer;
+                setStatus('收到来自 ' + remotePeerId + ' 的连接请求');
+                onConnectionEstablished(conn, false);
+                // 更新按钮
+                actionBtn.textContent = '已连接';
+                actionBtn.disabled = true;
+            });
+
+            peer.on('error', (err) => {
+                setStatus('Peer 错误: ' + err.message, true);
+                // 如果错误是因为 ID 被占用，提示更换房间名
+                if (err.type === 'unavailable-id') {
+                    setStatus('房间标识已被占用，请更换', true);
+                }
+                // 重置可操作
+                actionBtn.disabled = false;
+                actionBtn.textContent = '创建房间';
+                roomInput.disabled = false;
+                roomInput.classList.remove('disabled-input');
+                peer.destroy();
+                peer = null;
+            });
+        }
+
+        // ---------- 作为客户端：加入房间 ----------
+        function joinRoom(roomId) {
+            if (!roomId.trim()) {
+                setStatus('请输入房间标识', true);
+                return;
+            }
+
+            resetToInitial();
+
+            const hostId = 'host-' + roomId.trim();
+            remotePeerId = hostId;
+
+            // 客户端需要自己的 ID，让 peer 自动生成
+            peer = new Peer({
+                debug: 0,
+            });
+
+            peer.on('open', (id) => {
+                myPeerId = id;
+                setStatus('客户端 ID: ' + id + '，正在连接主机 ' + hostId + '…');
+                // 发起连接
+                const conn = peer.connect(hostId, {
+                    reliable: true
+                });
+                // 连接建立的处理在 open 事件中
+                conn.on('open', () => {
+                    setStatus('连接成功 (主机: ' + hostId + ')');
+                    onConnectionEstablished(conn, true);
+                    // 更新按钮
+                    actionBtn.textContent = '已连接';
+                    actionBtn.disabled = true;
+                    roomInput.disabled = true;
+                    roomInput.classList.add('disabled-input');
+                });
+
+                conn.on('error', (err) => {
+                    setStatus('连接失败: ' + err.message, true);
+                    // 重置
+                    actionBtn.disabled = false;
+                    actionBtn.textContent = '加入房间';
+                    roomInput.disabled = false;
+                    roomInput.classList.remove('disabled-input');
+                    // 关闭连接
+                    try { conn.close(); } catch(e) {}
+                    connection = null;
+                    peer.destroy();
+                    peer = null;
+                });
+            });
+
+            peer.on('error', (err) => {
+                setStatus('Peer 错误: ' + err.message, true);
+                actionBtn.disabled = false;
+                actionBtn.textContent = '加入房间';
+                roomInput.disabled = false;
+                roomInput.classList.remove('disabled-input');
+                peer.destroy();
+                peer = null;
+            });
+        }
+
+        // ---------- 按钮事件 ----------
+        actionBtn.addEventListener('click', function() {
+            const roomId = roomInput.value.trim();
+            if (!roomId) {
+                setStatus('请填写房间标识', true);
+                return;
+            }
+
+            if (currentRole === 'host') {
+                createRoom(roomId);
+            } else {
+                joinRoom(roomId);
+            }
         });
-        await pc.setRemoteDescription(answerDesc);
-        updateStatus('正在建立连接...');
-      } catch (err) {
-        showError(answerError, `设置 Answer 失败: ${err.message}`);
-      }
-    }
 
-    // ---------- 加入房间逻辑 ----------
-    async function joinRoom() {
-      const offerText = remoteOffer.value.trim();
-      if (!offerText) {
-        showError(joinError, '请先粘贴主机发给你的 Offer');
-        return;
-      }
-      joinError.textContent = '';
-      updateStatus('正在设置 Offer...');
-      try {
-        pc = new RTCPeerConnection(rtcConfig);
-        isCreator = false;
-
-        pc.ondatachannel = (event) => {
-          setupDataChannel(event.channel);
-        };
-
-        pc.onicecandidate = (event) => {
-          if (!event.candidate) {
-            answerSDP.value = pc.localDescription.sdp;
-            copyAnswerBtn.disabled = false;
-            updateStatus('Answer 已生成，请复制并发送回主机');
-          }
-        };
-
-        const cleanedOffer = cleanSDP(offerText);
-        const offerDesc = new RTCSessionDescription({
-          type: 'offer',
-          sdp: cleanedOffer
+        // 发送按钮
+        sendBtn.addEventListener('click', function() {
+            const text = chatInput.value.trim();
+            if (!text) return;
+            sendChatMessage(text);
         });
-        await pc.setRemoteDescription(offerDesc);
 
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-      } catch (err) {
-        showError(joinError, `加入失败: ${err.message}`);
-      }
-    }
-
-    // ---------- 事件绑定 ----------
-    createRoomBtn.addEventListener('click', createRoom);
-    copyOfferBtn.addEventListener('click', () => {
-      copyToClipboard(offerSDP.value, copyOfferBtn);
-    });
-    submitAnswerBtn.addEventListener('click', submitAnswer);
-
-    joinRoomBtn.addEventListener('click', joinRoom);
-    copyAnswerBtn.addEventListener('click', () => {
-      copyToClipboard(answerSDP.value, copyAnswerBtn);
-    });
-
-    sendBtn.addEventListener('click', sendMessage);
-    chatInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') sendMessage();
-    });
-
-    remoteAnswer.addEventListener('input', () => {
-      submitAnswerBtn.disabled = !remoteAnswer.value.trim();
-    });
-    remoteOffer.addEventListener('input', () => {
-      joinRoomBtn.disabled = !remoteOffer.value.trim();
-    });
-
-    submitAnswerBtn.disabled = true;
-    joinRoomBtn.disabled = true;
-  })();
-</script>
-</body>
-</html>
+        // 回车发送
+        chatInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+         
