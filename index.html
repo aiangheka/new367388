@@ -173,13 +173,8 @@
 
     // 清理 SDP 中可能导致跨浏览器解析失败的非标属性
     function cleanSDP(sdp) {
-      return sdp.split('\n')
-        .filter(line => {
-          const trimmed = line.trim();
-          return !trimmed.startsWith('a=max-message-size:') &&
-                 !trimmed.startsWith('a=extmap-allow-mixed');
-        })
-        .join('\n');
+      // 用正则删除整行 a=max-message-size:xxx（兼容各种换行符和前后空格）
+      return sdp.replace(/^a=max-message-size:.*[\r\n]*/gm, '');
     }
 
     async function copyToClipboard(text, button) {
